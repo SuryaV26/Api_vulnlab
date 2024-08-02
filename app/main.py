@@ -2,21 +2,36 @@ from fastapi import FastAPI, Response,HTTPException,status
 from fastapi.params import Body
 from pydantic import BaseModel
 from random import randrange 
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 app=FastAPI()
 
 class Users(BaseModel):
+    id: int
     author: str
-    book: str
-    Genre: str
+    bookname: str
+    genre: str
+
+try:
+    conn=psycopg2.connect(host='localhost',database='apilab',user='postgres',password='chola',cursor_factory=RealDictCursor)
+    cursor=conn.cursor()
+    print("connection successfull")
+
+except Exception as error:
+    print("Connection Failed")
+    print("Error:",error)
 
 users_info=[
     {"id":1,"author":"George RR Martin","book":"A song of ice and fire","Genre":"Fantasy"},
-    {"id":2,"author":"Fredrick Beckman","book":"A man called ove","Genre":"Casual"},
+    {"id":2,"author":"Fredrick Backman","book":"A man called ove","Genre":"Casual"},
     {"id":3,"author":"James Rollins","book":"Map of bones","Genre":"flag{AP1_000x1}"}
     ]
 
 
+
+
+#Api Routes:
 def find_user(id):
     for i in users_info:
         if i['id']==id:
