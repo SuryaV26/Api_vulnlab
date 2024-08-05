@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response,HTTPException,status
+from fastapi import FastAPI, Header, Response,HTTPException,status
 from fastapi.params import Body
 from pydantic import BaseModel
 from random import randrange 
@@ -9,10 +9,11 @@ app=FastAPI()
 
 class Users(BaseModel):
     id: int
-    author: str
-    bookname: str
-    genre: str
+    name: str
+    
 
+
+#DB connection:
 try:
     conn=psycopg2.connect(host='localhost',database='apilab',user='postgres',password='chola',cursor_factory=RealDictCursor)
     cursor=conn.cursor()
@@ -22,57 +23,38 @@ except Exception as error:
     print("Connection Failed")
     print("Error:",error)
 
-users_info=[
-    {"id":1,"author":"George RR Martin","book":"A song of ice and fire","Genre":"Fantasy"},
-    {"id":2,"author":"Fredrick Backman","book":"A man called ove","Genre":"Casual"},
-    {"id":3,"author":"James Rollins","book":"Map of bones","Genre":"flag{AP1_000x1}"}
-    ]
-
 
 
 
 #Api Routes:
-def find_user(id):
-    for i in users_info:
-        if i['id']==id:
-            return i
-
-def find_index(id):
-    for j,p in enumerate(users_info):
-        if p['id']==id:
-            return j
-
 
 #Get all post
 @app.get("/api/users")
 def all_post():
+    cursor.execute("""select id,name from users where id!=7""")
+    dis=cursor.fetchall()
+
     
-    return {"data":users_info}
+    return {"data":dis}
 
-
-#Creating User
-@app.post("/api/users")
-def create(user:Users):
-    user_dicti=user.model_dump()
-    user_dicti['id']=randrange(0,20)
-    users_info.append(user_dicti)
-    return {"Status":user_dicti}
 
 #Fetch user data
 @app.get("/api/users/{id}")
-def get_user(id:int):
-    if id==3:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail="Cannot access this id")
-    find=find_user(id)
-    return {"details":find}
+def get_user(id: int, authorization: str = Header(None)):
+    cursor.execute("""SELECT id, name,is_admin,flag  FROM users WHERE id=%s""" , (str(id),))
+    post = cursor.fetchone()
+    
+    if id == 7:
+        if authorization != "admin": 
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid authentication credentials for accessing user with id 7"
+            )
+        cursor.execute("""SELECT id, name,flag,is_admin FROM users WHERE id=%s""", (str(id),))
+        f = cursor.fetchone()
+        return {"data": f}
+    
+    return {"data": post}
 
 
 #Deleting user
-@app.delete("/api/users/{id}")
-def delete_user(id:int):
-    
-    index=find_index(id)
-    if index==None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    users_info.pop(index)
-    return "Deleted"
